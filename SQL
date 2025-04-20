@@ -520,7 +520,102 @@ select sum(case when b.chest_id is null then b.apple_count
    
  --------------------------------------------------
  
+ ---176 second highest salary 
+with cte as 
+(
+select *, dense_rank() over(order by salary desc) as R from Employee)
+
+selecr ifnull((select salary from cte where r=2 limit 1), null) as SecondHighestSalary
+---------
+with cte as (
+select * , dense_rank() over(order by salary desc) as r from Employee
+)
+
+select ifnull((select salary from cte where r=2 limit 1), null) as SecondHighestSalary
+
+---------------2175. The Change  in Global Rankings 
+
+with cte as (
+select t.team_id, t.name, t.points,
+  p.points_change, row_number() over(order by points desc, name) as initial_rank,
+  row_number() over(order by points+points_change desc, name) as new_rank
+  from TeamPoints t 
+  left join PointsChange PLANon t.team_id = p.team_id
+)
+
+select team_id, name, cast(initial_rank as Signed) - cast(new_rank as signed) as rank_diff
+from cte 
+
+---------------------------- 1549 The Most Recent Orders for Each Product 
+
+with cte as (
+select o.order_id, o.order_date, o.product_id, p.product_name, rank() over(partition by o.product_id order by o.order_date desc) as rnk 
+  from Orders O 
+  left join Products p 
+  on o.product_id = p.product_id
+)
+
+select product_name, product_id, order_id, order_date 
+from cte 
+where rnk=1 
+order by prodcut_name, product_id, order_id 
+
+----------------------------
+---area of an rectabgle 
+with cte as (
+select p1.id as p1, p2.id as p2, abs(p1.x_value -p2.x_value)*abs(p1.y_value -p2.y_value) as area
+  from Points p1
+  cross join Points p2
+  
+)
+
+select * 
+from cte
+where area<>0
+and p1< p2 
+order by area desc, p1,p2
+
+---------------------------- 2298 Tasks Count in the Weekends 
+select sum(case when dayofweek(submit_date) in (1,7) then 1 else 0 end) as weekend_cnt,
+sum(case when dayofweek(submit_date) not in (1,7) then 1 else 0 end) as working_cnt
+from Tasks
+
+----------------------------2308 Arrange Table by Gender 
+with cte as 
+(
+select * , rank() over(partition by gender order by user_id) as rnk1,
+  case when gender='female' then 1
+  when gender='other' then 2
+  else 3 end as rnk2
+  from genders
+)
+
+select user_id, gender
+from cte
+order by rnk1, rnk2
+
+----------------------------2051 The Category of each Member in the Store 
+with cte as (
+select m.member_id, m.name, v.visit-id,
+  p.charged_amount
+  from Members m 
+  left join Visits v 
+  on m.member_id = v.member-id 
+  left join Purchase  p 
+  on v.visit_id = p.visit_id
+),
+cte2 as (
+select member_id, name, sum(case when charged_amount is not null then 1 else 0 end)/count(*)*100 as conversion_rate from cte
+  group by member_id, name)
+  
+ select member_id, name, case when conversion_rate >=80 then 'Diamond'
+ when conversion_rate >=50  and conversion_rate <80 then 'Gold'
+ when conversion_rate <50 and member_id in (select distinct member_id from visits) then 'Silver'
+ else 'Bronze' end as category 
+ from cte2
  
+
+
    
    
    
