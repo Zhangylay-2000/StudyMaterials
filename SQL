@@ -369,6 +369,164 @@ select sum(case when b.chest_id is null then b.apple_count
   
    ---------------------------------------------- 
   ---1532 The Most Recent Three Orders 
+    ---1532 The Most Recent Three Orders 
+  
+ with cte as (
+ select c.name, o.customer_id, o.order_id,
+   o.order_date, rank() over(partition by o.customer_id order by o.order_date desc ) as r 
+   from Orders left join Customers c 
+   on o.customer_id = c.customer_id
+ )
+ 
+ select name as customer_name, customer_id, order_id, order_date from cte where r<=3 
+ order by customer_name, customer_id, order_date desc 
+  --------------------------------
+  ----2112 max traffic 
+  with cte as (
+  select departure_airport as airport_id,
+    sum(flight_count) as number
+    from Flights
+    group by departure_airport
+  ),
+  
+  cte2 as (
+  select arrival_airport as airport_id,
+    sum(flights_count) as number
+    from Flights
+    group by arrival_airport
+  ),
+  
+  cte3 as (
+  select arrival_airport as airport_id,
+    sum(flights_count) as number
+    from Flights
+    group by arrival_airport
+  ),
+  
+  cte4 as (
+  select * from cte 
+    union select * from cte2
+  ),
+  
+  select airport_id
+  from cte4 where traffic = (select max(traffic) from cte4)
+  
+  --------------------------------------------------
+ ---626 
+ with cte as (
+ select *, lead(id) over(partition by id) as next,
+   lag(id) over(order by id) as prev
+   from Seat
+ )
+ 
+ select case when ((i%2 = 1) and next is not null) then next
+ when (id%2 = 0) then prev 
+ else  id end as id, student
+ from cte
+ order by id; 
+ 
+ --------------------------------------------------
+ ---1164 
+ with cte as (
+ select *, rank() over(partition by product_id order by change_date desc) as R
+   from Products 
+   where change_date <='2019-08-16')
+   
+  select productr_id, new_price as price
+  from cte 
+  where r=1 
+  union 
+  select product_id , 10 as price 
+  from Products 
+  where prodcut_id not in (select product_id from cte)
+ 
+ 
+  --------------------------------------------------
+  ---1045 Customers who boubght all the producs 
+  
+  select customer_id 
+  from Customer
+  group by customer_id 
+  having count(distinct product_key) =(select count(distinct product_key) from Product)
+  
+    --------------------------------------------------
+    ----1193 Monthly Transactions I 
+   
+  select date_format(trans_date,'%Y-%m') as month,
+  country,count(id) as trans_count, sum(case when state = 'approved' then 1 else 0 end ) as approved_count,
+  sum(amount) as trnas_total_amount, sum(case when state='approved' then amount else 0 end ) as approved_total_amount
+  from  Transactions 
+  group by date_format(trnas_date,'%Y-%m'),
+  country
+  
+   ----1193 Monthly Transactions I  --> repeat ++
+   select date_format(trans_date,'%Y-%m') as month,
+   country,
+   count(id) as trans_count,
+   sum(case when state='approved' then 1 else 0 end) as approved_count,
+   sum(amount) as trans_total_amount,
+   sum(case when state='approved' then amount else 0 end) as approved_total_amount
+   from Transactions
+   group by  date_format(trans_date,'%Y-%m'),
+   country 
+   
+   --------------------------------------------------
+   ---1158 Market Analysis I 
+   
+   with cte as (
+   select u.user_id, sum(case when year(o.order_date) =2019 then 1 else 0 end) as orders_in_2019
+     from Users u 
+     left join Orders o 
+     on u.user_id =o.buyer_id 
+     group by u.user_id
+   )
+   
+   select c.user_id as buyer_id, u.join_date, c.orders_in_2019 
+   from cte c 
+   left join Users u 
+   on c.user_id = u.user_id
+   
+   --------------------------------------------------    
+   ---1174
+   
+   with cte as (
+   select *, rank() over(partitionby customer_id order by order_date) as order_number,
+     case when order_date = customer_pref_delivery_date then 'immediate' else 'scheduled' end as order_type from Delivery   )
+     
+     select round(sum(case when order_type='immediate' then 1 else 0 end)/count(*)*100,2) as immediate_percentage
+     from cte 
+     where order_number =1
+     
+     --------------------------------------------------
+     
+   ---178 rank scores 
+   
+   select score, dense_rank() over(order by Score desc) as 'rank'
+   from Scores
+   order by score DESC
+   
+   --------------------------------------------------  1126 Active Businesses 
+   --active bisuness that has more than one event_type 
+   with cte as (
+   select *, avg(occurences) over(partition by event_type) as avg_occ
+     from Events
+   )
+   
+  select business_id
+  from cte 
+  where occurences > avg_occ 
+  group by business_id 
+  having count(event_type)>1
+   
+ --------------------------------------------------
+ 
+ 
+   
+   
+   
+   
+   
+  
   
   
   
